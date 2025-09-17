@@ -47,8 +47,9 @@ jobs:
           node -e "
           const fs = require('fs');
           const merged = {};
-          for (const file of fs.readdirSync('feeds')) {
-            const data = JSON.parse(fs.readFileSync(`feeds/${file}`));
+          const files = fs.readdirSync('feeds').filter(f => f.endsWith('.json'));
+          for (const file of files) {
+            const data = JSON.parse(fs.readFileSync(`feeds/${file}`, 'utf8'));
             const advisories = data.advisories || data.vulns || [];
             for (const adv of advisories) {
               const name = adv.package?.name || adv.module_name;
@@ -58,8 +59,8 @@ jobs:
             }
           }
           fs.writeFileSync('threats.json', JSON.stringify(merged, null, 2));
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, \`count=\${Object.keys(merged).length}\n\`);
           console.log('Merged threats.json created with', Object.keys(merged).length, 'packages');
-          console.log(`::set-output name=count::${Object.keys(merged).length}`);
           "
 
       - name: Check for changes
