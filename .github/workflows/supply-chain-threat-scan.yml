@@ -125,24 +125,14 @@ jobs:
           console.log('Merged threats.json with', Object.keys(out).length, 'packages');
           EOF
 
-
       - name: Check for changes
         id: git_diff
         run: |
-          if git diff --quiet threats.json; then
+          git fetch origin main
+          if git diff --quiet origin/main -- threats.json; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Run scan-compromised with merged threats
-        id: scan
-        run: |
-          if [ "${{ steps.git_diff.outputs.changed }}" = "true" ]; then
-            npx scan-compromised --threats-file threats.json > scan-results.txt || true
-            echo "results<<EOF" >> $GITHUB_OUTPUT
-            cat scan-results.txt >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
           fi
 
       - name: Create update branch, commit, and push
@@ -153,7 +143,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
-          git add threats.json
+          git add -- threats.json
           git commit -m "chore: update threats.json from feeds"
           git push origin "$BRANCH"
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
