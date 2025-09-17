@@ -1,3 +1,11 @@
+## v1.0.10
+
+# v1.0.9 - 2025-09-17
+
+
+
+
+
 ## v1.0.9
 Initial CLI tool
 Updated list of threats
