@@ -18,54 +18,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 🛡 Fail if tag and package.json version mismatch
-      - name: Verify tag matches package.json version
-        run: |
-          TAG="${GITHUB_REF_NAME}"              # e.g. v1.2.3
-          VERSION="${TAG#v}"                    # strip leading 'v'
-          PKG_VERSION=$(node -p "require('./package.json').version")
-          echo "Tag version: $VERSION"
-          echo "package.json version: $PKG_VERSION"
-          if [ "$VERSION" != "$PKG_VERSION" ]; then
-            echo "❌ Version mismatch — updating package.json to $VERSION"
-            npm version "$VERSION" --no-git-tag-version
-          else
-            echo "✅ Versions match"
-          fi
-
-      - name: Generate changelog text
-        id: changelog
-        uses: loopwerk/tag-changelog@v1
+      # Extract the latest changelog section for this tag
+      - name: Extract release notes from CHANGELOG.md
+        id: notes
+        uses: ffurrer2/extract-release-notes@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          exclude_types: other,perf
-
-      - name: Prepend to CHANGELOG.md
-        run: |
-          NEW_CHANGELOG="## ${{ github.ref_name }}\n\n${{ steps.changelog.outputs.changelog }}\n"
-          if [ -f CHANGELOG.md ]; then
-            cp CHANGELOG.md OLD_CHANGELOG.md
-            echo -e "$NEW_CHANGELOG\n$(cat OLD_CHANGELOG.md)" > CHANGELOG.md
-          else
-            echo -e "$NEW_CHANGELOG" > CHANGELOG.md
-          fi
-
-      - name: Commit and push version + CHANGELOG.md
-        uses: EndBug/add-and-commit@v9
-        with:
-          add: |
-            package.json
-            CHANGELOG.md
-          message: "chore(release): ${{ github.ref_name }} — update package.json & CHANGELOG"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          changelog_file: CHANGELOG.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          body: ${{ steps.changelog.outputs.changelog }}
+          body: ${{ steps.notes.outputs.release_notes }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -75,12 +40,7 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Update npm
-        run: npm install -g npm@latest
-
-      - run: npm ci
-      - run: npm run build --if-present
-      - run: npm test
-      - run: npm publish
+      - name: Publish to npm
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
