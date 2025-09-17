@@ -1,0 +1,72 @@
+name: Release on Tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog text
+        id: changelog
+        uses: loopwerk/tag-changelog@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          exclude_types: other,perf
+
+      - name: Prepend to CHANGELOG.md
+        run: |
+          NEW_CHANGELOG="## ${{ github.ref_name }}\n\n${{ steps.changelog.outputs.changelog }}\n"
+          if [ -f CHANGELOG.md ]; then
+            cp CHANGELOG.md OLD_CHANGELOG.md
+            echo -e "$NEW_CHANGELOG\n$(cat OLD_CHANGELOG.md)" > CHANGELOG.md
+          else
+            echo -e "$NEW_CHANGELOG" > CHANGELOG.md
+          fi
+
+      - name: Commit and push CHANGELOG.md
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: CHANGELOG.md
+          message: "docs: update CHANGELOG for ${{ github.ref_name }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.changelog }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org/'
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      # Ensure npm 11.5.1 or later is installed
+      - name: Update npm
+        run: npm install -g npm@latest
+      - run: npm ci
+      - run: npm run build --if-present
+      - run: npm test
+      - run: npm publish
