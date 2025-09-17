@@ -18,13 +18,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 🆕 Update package.json version from tag
-      - name: Update package.json version
+      # 🛡 Fail if tag and package.json version mismatch
+      - name: Verify tag matches package.json version
         run: |
           TAG="${GITHUB_REF_NAME}"              # e.g. v1.2.3
           VERSION="${TAG#v}"                    # strip leading 'v'
-          echo "Updating package.json to version $VERSION"
-          npm version "$VERSION" --no-git-tag-version
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "Tag version: $VERSION"
+          echo "package.json version: $PKG_VERSION"
+          if [ "$VERSION" != "$PKG_VERSION" ]; then
+            echo "❌ Version mismatch — updating package.json to $VERSION"
+            npm version "$VERSION" --no-git-tag-version
+          else
+            echo "✅ Versions match"
+          fi
 
       - name: Generate changelog text
         id: changelog
@@ -75,3 +82,5 @@ jobs:
       - run: npm run build --if-present
       - run: npm test
       - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
