@@ -66,7 +66,7 @@ jobs:
           node - <<'EOF'
           const fs = require('fs');
           const path = require('path');
-
+      
           const merged = {};
           const add = (name, versions) => {
             if (!name) return;
@@ -75,7 +75,7 @@ jobs:
               if (typeof v === 'string' && v.trim()) merged[name].add(v.trim());
             }
           };
-
+      
           const parseFeed = (data) => {
             if (!data || typeof data !== 'object') return;
             if (Array.isArray(data.advisories)) {
@@ -100,10 +100,10 @@ jobs:
               }
             }
           };
-
+      
           const files = fs.readdirSync('feeds')
             .filter(f => f.endsWith('.json') && fs.statSync(path.join('feeds', f)).isFile());
-
+      
           for (const f of files) {
             try {
               const raw = fs.readFileSync(path.join('feeds', f), 'utf8');
@@ -114,16 +114,17 @@ jobs:
               console.error('Skipping bad feed file:', f, e.message);
             }
           }
-
+      
           const out = {};
           for (const [k, set] of Object.entries(merged)) {
             out[k] = Array.from(set).sort();
           }
-
+      
           fs.writeFileSync('threats.json', JSON.stringify(out, null, 2));
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `count=${Object.keys(out).length}\n`);
           console.log('Merged threats.json with', Object.keys(out).length, 'packages');
           EOF
+
 
       - name: Check for changes
         id: git_diff
