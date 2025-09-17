@@ -1,0 +1,114 @@
+name: Supply Chain Threat Scan
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * *' # Daily at 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch threat feeds
+        run: |
+          mkdir feeds
+          echo "Fetching Socket.dev advisories..."
+          curl -s https://socket.dev/api/advisories/npm > feeds/socket.json
+          echo "Fetching Step Security advisories..."
+          curl -s https://stepsecurity.io/api/advisories/npm > feeds/stepsecurity.json
+          echo "Fetching OSV.dev advisories..."
+          curl -s -X POST https://api.osv.dev/v1/querybatch \
+            -H 'Content-Type: application/json' \
+            -d '{"queries":[{"ecosystem":"npm"}]}' > feeds/osv.json
+
+      - name: Merge feeds into threats.json
+        id: merge
+        run: |
+          node -e "
+          const fs = require('fs');
+          const merged = {};
+          for (const file of fs.readdirSync('feeds')) {
+            const data = JSON.parse(fs.readFileSync(`feeds/${file}`));
+            const advisories = data.advisories || data.vulns || [];
+            for (const adv of advisories) {
+              const name = adv.package?.name || adv.module_name;
+              if (!name) continue;
+              const versions = adv.versions || adv.affected_versions || [];
+              merged[name] = [...new Set([...(merged[name]||[]), ...versions])];
+            }
+          }
+          fs.writeFileSync('threats.json', JSON.stringify(merged, null, 2));
+          console.log('Merged threats.json created with', Object.keys(merged).length, 'packages');
+          console.log(`::set-output name=count::${Object.keys(merged).length}`);
+          "
+
+      - name: Check for changes
+        id: git_diff
+        run: |
+          if git diff --quiet threats.json; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run scan-compromised with merged threats
+        id: scan
+        run: |
+          if [ "${{ steps.git_diff.outputs.changed }}" = "true" ]; then
+            npx scan-compromised --threats-file threats.json > scan-results.txt || true
+            echo "results<<EOF" >> $GITHUB_OUTPUT
+            cat scan-results.txt >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.git_diff.outputs.changed == 'true'
+        id: commit_and_push
+        run: |
+          BRANCH="update-threats-$(date +%Y%m%d%H%M%S)"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add threats.json
+          git commit -m "chore: update threats.json from threat feeds"
+          git push origin "$BRANCH"
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        if: steps.git_diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: ${{ steps.commit_and_push.outputs.branch }}
+          base: main
+          title: "chore: update threats.json — ${{ steps.merge.outputs.count }} threats listed"
+          body: |
+            Automated update of `threats.json` from:
+            - Socket.dev
+            - Step Security
+            - OSV.dev
+
+            **Scan results:**
+            ```
+            ${{ steps.scan.outputs.results }}
+            ```
+          commit-message: "chore: update threats.json from threat feeds"
