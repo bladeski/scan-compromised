@@ -1,0 +1,101 @@
+name: Tag, Release & Publish on Merge to Main
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  id-token: write    # Required for npm Trusted Publishing (OIDC)
+  contents: write    # Needed to push commits/tags
+  packages: write    # Needed to publish packages
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT_TAG_PUSH }} # PAT so pushes are treated as user actions
+
+      - name: Setup Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Generate changelog BEFORE bump so it covers commits since last tag
+      - name: Generate changelog text
+        id: changelog
+        uses: loopwerk/tag-changelog@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          exclude_types: other,perf
+
+      # Bump version, commit, and tag in one step
+      - name: Determine and bump version
+        id: bump
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
+          NEW_VERSION="$major.$minor.$((patch+1))"
+          npm version "$NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      # Prepend changelog to file
+      - name: Prepend to CHANGELOG.md
+        run: |
+          NEW_CHANGELOG="## v${{ steps.bump.outputs.new_version }}\n\n${{ steps.changelog.outputs.changelog }}\n"
+          if [ -f CHANGELOG.md ]; then
+            cp CHANGELOG.md OLD_CHANGELOG.md
+            echo -e "$NEW_CHANGELOG\n$(cat OLD_CHANGELOG.md)" > CHANGELOG.md
+          else
+            echo -e "$NEW_CHANGELOG" > CHANGELOG.md
+          fi
+
+      # Amend bump commit to include changelog
+      - name: Amend commit to include CHANGELOG.md
+        run: |
+          git add CHANGELOG.md
+          git commit --amend --no-edit
+
+      # Push commit and tag
+      - name: Push commit and tag
+        run: git push origin main --follow-tags
+
+      # Extract the latest changelog section for this tag
+      - name: Extract release notes from CHANGELOG.md
+        id: notes
+        uses: ffurrer2/extract-release-notes@v2
+        with:
+          changelog_file: CHANGELOG.md
+
+      # Create GitHub Release with extracted notes
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.bump.outputs.new_version }}
+          name: Release v${{ steps.bump.outputs.new_version }}
+          body: ${{ steps.notes.outputs.release_notes }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Setup Node.js for publish
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      # Ensure correct registry and publish via Trusted Publishing
+      - name: Ensure npm registry
+        run: npm config set registry https://registry.npmjs.org/
+
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      - name: Publish to npm (Trusted Publishing)
+        run: npm publish --access public
