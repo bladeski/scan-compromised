@@ -64,13 +64,20 @@ jobs:
       - name: Push commit and tag
         run: git push origin main --follow-tags
 
-      # Create GitHub Release with changelog body
+      # Extract the latest changelog section for this tag
+      - name: Extract release notes from CHANGELOG.md
+        id: notes
+        uses: ffurrer2/extract-release-notes@v2
+        with:
+          changelog_file: CHANGELOG.md
+
+      # Create GitHub Release with extracted notes
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.bump.outputs.new_version }}
           name: Release v${{ steps.bump.outputs.new_version }}
-          body: ${{ steps.changelog.outputs.changelog }}
+          body: ${{ steps.notes.outputs.release_notes }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
