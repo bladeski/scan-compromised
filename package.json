@@ -1,0 +1,15 @@
+{
+  "name": "scan-compromised-cli",
+  "version": "1.0.0",
+  "description": "A simple npm CLI tool (starter template)",
+  "main": "index.js",
+  "bin": {
+    "scan-compromised": "./index.js"
+  },
+  "files": ["index.js", "threats.json"],
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "",
+  "license": "MIT"
+}
