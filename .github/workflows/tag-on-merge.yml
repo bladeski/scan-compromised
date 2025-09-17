@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.PAT_TAG_PUSH }}  # ✅ Use PAT here
+          token: ${{ secrets.PAT_TAG_PUSH }}  # Use PAT so tag push triggers release-on-tag
 
       - name: Setup Git identity
         run: |
@@ -27,21 +27,14 @@ jobs:
       - name: Determine next version
         id: bump
         run: |
-          # Simple patch bump — adjust logic if you want semver from commit messages
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
           NEW_VERSION="$major.$minor.$((patch+1))"
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Update package.json version
-        run: npm version ${{ steps.bump.outputs.new_version }} --no-git-tag-version
+      # ✅ npm will bump, commit, and tag in one step
+      - name: Bump version and tag
+        run: npm version ${{ steps.bump.outputs.new_version }}
 
-      - name: Commit version bump
-        run: |
-          git add package.json
-          git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }}"
-
-      - name: Create and push tag
-        run: |
-          git tag v${{ steps.bump.outputs.new_version }}
-          git push origin main --follow-tags
+      - name: Push commit and tag
+        run: git push origin main --follow-tags
