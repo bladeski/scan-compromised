@@ -3,10 +3,17 @@
   "version": "1.0.1",
   "description": "A simple npm CLI tool (starter template)",
   "main": "index.js",
-  "bin": {
-    "scan-compromised": "./index.js"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bladeski/scan-compromised.git"
   },
-  "files": ["index.js", "threats.json"],
+  "bin": {
+    "scan-compromised": "index.js"
+  },
+  "files": [
+    "index.js",
+    "threats.json"
+  ],
   "scripts": {
     "start": "node index.js"
   },
