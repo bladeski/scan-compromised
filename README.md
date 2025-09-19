@@ -2,6 +2,8 @@
 
 🔍 A CLI tool to detect known compromised npm packages in your project.
 
+**No third-party dependencies:** This tool is fully self-contained and does not rely on any external npm packages or libraries. You can use it with confidence in sensitive or locked-down environments.
+
 This scanner checks your `package.json`, `package-lock.json`, `yarn.lock`, and `pnpm-lock.yaml` files for any packages that were compromised in recent supply chain attacks — including the September 2025 Shai-Hulud incident.
 
 It flags:
@@ -12,7 +14,7 @@ It flags:
 
 ## 🚀 Installation
 
-### Run directly with `npx` (no install)
+### Recommended: Run directly with `npx` (no install)
 ```bash
 npx scan-compromised
 ```
@@ -22,10 +24,21 @@ npm install -g scan-compromised
 scan-compromised
 ```
 ## 📦 Usage
+
 ### Basic scan
 ```bash
 scan-compromised
 ```
+
+### Hard gate: block installs with known advisories
+Add this to your project's `preinstall` script in `package.json`:
+```json
+"scripts": {
+  "preinstall": "npx scan-compromised"
+}
+```
+This will prevent installation of any dependencies with known advisories, acting as a hard gate in your supply chain.
+
 ### JSON output (for CI integration)
 ```bash
 scan-compromised --json

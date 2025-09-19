@@ -4,6 +4,7 @@ import { join, isAbsolute, dirname } from "path";
 import { fileURLToPath } from "url";
 import util from "util";
 import CONFIG from "../config/config.js";
+import { logToRoot } from "./logger.js";
 
 // Create a debug logger for the "threats" namespace
 const debug = util.debuglog("threats");
@@ -272,15 +273,18 @@ function scanPnpmLock(content, bad) {
   debug("Bad findings: %d, Warn findings: %d", badFindings.length, warnFindings.length);
 
   warnFindings.forEach(f =>
-    console.log(`⚠️  WARNING: ${f.pkg}@${f.version} in ${f.file} (${f.where}) — package was targeted in past attack, but version is not flagged as malicious`)
+    logToRoot(`WARNING: ${f.pkg}@${f.version} in ${f.file} (${f.where}) — package had previous vulnerability, but version is not flagged with advisory.`)
   );
 
-  badFindings.forEach(f =>
-    console.log(`❌ ALERT: ${f.pkg}@${f.version} in ${f.file} (${f.where}) — known malicious version`)
-  );
+  badFindings.forEach(f => {
+    console.log(`❌ ALERT: ${f.pkg}@${f.version} in ${f.file} (${f.where}) — known advisory`);
+    logToRoot(`ALERT: ${f.pkg}@${f.version} in ${f.file} (${f.where}) — known advisory`);
+  });
 
   if (badFindings.length === 0) {
-    console.log("✅ No known malicious versions detected.");
+    console.log("✅ No known advisories detected.");
+    logToRoot("No known advisories detected.");
+    console.log("Scan completed, results can be found in scan-compromised.log");
   } else {
     debug("Exiting with code 1 due to bad findings");
     process.exit(1);
