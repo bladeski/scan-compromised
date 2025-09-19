@@ -30,10 +30,11 @@ jobs:
       - name: Install changelog tools
         run: npm install -g conventional-recommended-bump conventional-changelog-cli conventional-changelog-conventionalcommits
 
+      # Determine next version automatically
       - name: Determine next version
         id: bump
         run: |
-          RELEASE_TYPE=$(npx conventional-recommended-bump -p conventionalcommits | node -pe "JSON.parse(fs.readFileSync(0,'utf8')).releaseType")
+          RELEASE_TYPE=$(npx conventional-recommended-bump -p conventionalcommits)
           if [ -z "$RELEASE_TYPE" ] || [ "$RELEASE_TYPE" = "null" ]; then
             echo "No conventional commits since last release. Skipping."
             echo "release_needed=false" >> $GITHUB_OUTPUT
