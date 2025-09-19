@@ -1,4 +1,6 @@
 name: Scan for Compromised Packages
+permissions:
+  contents: read
 
 on:
   workflow_dispatch:
