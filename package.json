@@ -13,6 +13,7 @@
   },
   "files": [
     "scripts/index.js",
+    "scripts/logger.js",
     "data/threats.json",
     "config/config.js"
   ],
