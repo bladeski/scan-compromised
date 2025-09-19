@@ -1,0 +1,72 @@
+name: Update Threats
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # Runs daily at 03:00 UTC
+  workflow_dispatch:     # Allows manual trigger
+
+jobs:
+  update-threats:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run update-threats script
+        run: npm run update-threats
+
+      - name: Create new branch
+        run: |
+          BRANCH="update-threats-$(date +'%Y%m%d')"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git checkout -b "$BRANCH"
+          git add data/last-updated.json data/threats.json
+          git commit -m "Update threats data [auto]"
+          git push origin "$BRANCH"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create pull request
+        id: create_pr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: update-threats-${{ github.run_id }}
+          title: "Update threats data"
+          body: "Automated update from daily run"
+          base: main
+          commit-message: "Update threats data [auto]"
+          labels: auto-merge
+
+      - name: Auto-merge PR if possible
+        if: steps.create_pr.outputs.pull-request-number != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: ${{ steps.create_pr.outputs.pull-request-number }}
+            });
+            if (pr.data.mergeable && pr.data.mergeable_state === 'clean') {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.data.number,
+                merge_method: 'squash'
+              });
+            }
