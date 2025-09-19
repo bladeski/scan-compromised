@@ -1,6 +1,7 @@
 name: Tag, Release & Publish on Merge to Main
 
 on:
+  workflow_dispatch:
   pull_request:
     types: [closed]
     branches: [main]
@@ -28,13 +29,12 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Install changelog tools
-        run: npm install -g conventional-changelog-cli conventional-recommended-bump jq
+        run: npm install -g conventional-recommended-bump conventional-changelog-cli conventional-changelog-conventionalcommits
 
-      # Determine next version automatically
       - name: Determine next version
         id: bump
         run: |
-          RELEASE_TYPE=$(npx conventional-recommended-bump -p conventionalcommits | jq -r '.releaseType')
+          RELEASE_TYPE=$(npx conventional-recommended-bump -p conventionalcommits | node -pe "JSON.parse(fs.readFileSync(0,'utf8')).releaseType")
           if [ -z "$RELEASE_TYPE" ] || [ "$RELEASE_TYPE" = "null" ]; then
             echo "No conventional commits since last release. Skipping."
             echo "release_needed=false" >> $GITHUB_OUTPUT
