@@ -27,37 +27,36 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # Install changelog + bump tools
       - name: Install changelog tools
-        run: npm install -g conventional-changelog-cli conventional-recommended-bump
+        run: npm install -g conventional-changelog-cli conventional-recommended-bump jq
 
       # Determine next version automatically
       - name: Determine next version
         id: bump
         run: |
           RELEASE_TYPE=$(npx conventional-recommended-bump -p conventionalcommits | jq -r '.releaseType')
-          if [ "$RELEASE_TYPE" = "null" ] || [ -z "$RELEASE_TYPE" ]; then
+          if [ -z "$RELEASE_TYPE" ] || [ "$RELEASE_TYPE" = "null" ]; then
             echo "No conventional commits since last release. Skipping."
             echo "release_needed=false" >> $GITHUB_OUTPUT
-          else
-            CURRENT=$(node -p "require('./package.json').version")
-            IFS='.' read -r major minor patch <<< "$CURRENT"
-            case "$RELEASE_TYPE" in
-              major) major=$((major+1)); minor=0; patch=0 ;;
-              minor) minor=$((minor+1)); patch=0 ;;
-              patch) patch=$((patch+1)) ;;
-            esac
-            NEW_VERSION="$major.$minor.$patch"
-            npm version "$NEW_VERSION" --no-git-tag-version
-            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-            echo "release_needed=true" >> $GITHUB_OUTPUT
+            exit 0
           fi
+          CURRENT=$(node -p "require('./package.json').version")
+          IFS='.' read -r major minor patch <<< "$CURRENT"
+          case "$RELEASE_TYPE" in
+            major) major=$((major+1)); minor=0; patch=0 ;;
+            minor) minor=$((minor+1)); patch=0 ;;
+            patch) patch=$((patch+1)) ;;
+          esac
+          NEW_VERSION="$major.$minor.$patch"
+          npm version "$NEW_VERSION" --no-git-tag-version
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "release_needed=true" >> $GITHUB_OUTPUT
 
       - name: Stop if no release needed
-        if: steps.bump.outputs.release_needed == 'false'
+        if: steps.bump.outputs.release_needed != 'true'
         run: exit 0
 
-      # Generate only the latest changelog section
+      # Generate only the latest changelog section from commits since last tag
       - name: Generate latest changelog section
         id: changelog
         run: |
@@ -86,7 +85,7 @@ jobs:
       - name: Push commit and tag
         run: git push origin main --follow-tags
 
-      # Extract release notes from the latest section
+      # Use the latest section as release notes
       - name: Extract release notes
         id: notes
         run: |
@@ -94,7 +93,6 @@ jobs:
           echo "${{ steps.changelog.outputs.latest_changelog }}" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      # Create GitHub Release
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -104,7 +102,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Setup Node.js for publish
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
