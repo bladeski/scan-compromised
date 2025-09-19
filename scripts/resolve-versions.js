@@ -152,7 +152,7 @@ async function resolveVersions() {
     }
 
     fs.writeFileSync(threatsFile, JSON.stringify(threats, null, 2));
-    console.log(`Resolved and merged ${Object.keys(advisories).length} packages into ../data/threats.json`);
+    console.log(`Resolved and merged ${Object.keys(advisories).length} packages into ${threatsFile}`);
   } catch (err) {
     console.error('Error in resolveVersions:', err);
     const lastUpdatedTemp = fs.existsSync(lastUpdatedTempFile)
