@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: 📄 Security Policy
+    url: https://github.com/bladeski/scan-compromised/security/policy
+    about: Please read our security policy for how to report vulnerabilities privately.
+
+  - name: 📚 Documentation
+    url: https://github.com/bladeski/scan-compromised#readme
+    about: Check the README and docs before filing a bug or feature request.
+
+  - name: 💬 Discussions
+    url: https://github.com/bladeski/scan-compromised/discussions
+    about: For general questions, ideas, or help that isn’t a bug or feature request.
