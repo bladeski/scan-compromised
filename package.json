@@ -2,20 +2,22 @@
   "name": "scan-compromised",
   "version": "1.0.10",
   "description": "A simple npm CLI tool (starter template)",
-  "main": "index.js",
+  "main": "scripts/index.js",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bladeski/scan-compromised.git"
   },
   "bin": {
-    "scan-compromised": "index.js"
+    "scan-compromised": "scripts/index.js"
   },
   "files": [
-    "index.js",
-    "threats.json"
+    "scripts/index.js",
+    "data/threats.json"
   ],
   "scripts": {
-    "start": "node index.js"
+    "start": "node scripts/index.js",
+    "update-threats": "node scripts/fetch-advisories.js && node scripts/resolve-versions.js"
   },
   "author": "",
   "license": "MIT"
