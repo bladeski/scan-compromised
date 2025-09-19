@@ -27,13 +27,17 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # Generate changelog BEFORE bump so it covers commits since last tag
+      # Generate changelog using conventional commits
       - name: Generate changelog text
         id: changelog
-        uses: loopwerk/tag-changelog@v1
+        uses: TriPSs/conventional-changelog-action@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          exclude_types: other,perf
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          output-file: CHANGELOG.md
+          skip-version-file: true
+          skip-commit: true
+          skip-tag: true
+          preset: conventionalcommits
 
       # Bump version, commit, and tag in one step
       - name: Determine and bump version
