@@ -1,3 +1,8 @@
+## [1.1.1](https://github.com/bladeski/scan-compromised/compare/v1.1.0...v1.1.1) (2025-09-19)
+
+### Bug Fixes
+
+* include logger.js in package files ([c4ca249](https://github.com/bladeski/scan-compromised/commit/c4ca249b15dffef6bb8b8c4abcb78f4f2e2dfe83))
 ## [1.1.0](https://github.com/bladeski/scan-compromised/compare/v1.0.21...v1.1.0) (2025-09-19)
 
 ### Features
