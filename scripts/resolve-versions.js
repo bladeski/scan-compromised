@@ -1,6 +1,12 @@
 import fs from 'fs';
-import https from 'https';
 import CONFIG from '../config/config.js';
+import { 
+  printProgress, 
+  httpsRequest,
+  throttle,
+  formatTime,
+  drawProgressBar
+} from './helpers.js';
 
 const {
   registryUrl,
@@ -76,25 +82,6 @@ function satisfiesFull(version, range) {
   return false;
 }
 
-// --- Registry fetch with retry ---
-function httpsRequest(url, options) {
-  return new Promise((resolve, reject) => {
-    const req = https.request(url, options, res => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          resolve(JSON.parse(data));
-        } else {
-          reject(new Error(`${res.statusCode} ${res.statusMessage}: ${data}`));
-        }
-      });
-    });
-    req.on('error', reject);
-    req.end();
-  });
-}
-
 async function getVulnerableVersions(pkg, range) {
   try {
     const encodedName = encodeURIComponent(pkg);
@@ -121,54 +108,6 @@ async function getVulnerableVersionsWithRetry(pkg, range, retries = 3) {
       await new Promise(res => setTimeout(res, 500 * (attempt + 1)));
     }
   }
-}
-
-// --- Throttling ---
-function throttle(items, limit, fn) {
-  const results = [];
-  let i = 0;
-
-  return new Promise((resolve) => {
-    let active = 0;
-
-    function next() {
-      while (active < limit && i < items.length) {
-        const index = i++;
-        active++;
-        fn(items[index])
-          .then(result => results[index] = result)
-          .catch(() => results[index] = null)
-          .finally(() => {
-            active--;
-            next();
-          });
-      }
-      if (i >= items.length && active === 0) resolve(results);
-    }
-
-    next();
-  });
-}
-
-// --- Progress helpers ---
-function formatTime(seconds) {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}m ${secs}s`;
-}
-
-function drawProgressBar(completed, total, eta) {
-  const percent = Math.floor((completed / total) * 100);
-  const filled = Math.floor((percent / 100) * progressBarLength);
-  const bar = '█'.repeat(filled) + '░'.repeat(progressBarLength - filled);
-  return `processing ${completed} of ${total} packages ${bar} ${percent}% — ETA: ${eta}`;
-}
-
-function printProgress(message, newLine = false) {
-  process.stdout.cursorTo(0);
-  process.stdout.clearLine();
-  process.stdout.write(message);
-  if (newLine) process.stdout.write('\n');
 }
 
 // --- Main merge logic ---
@@ -213,6 +152,7 @@ async function resolveVersions() {
     }
 
     fs.writeFileSync(threatsFile, JSON.stringify(threats, null, 2));
+    console.log(`Resolved and merged ${Object.keys(advisories).length} packages into ../data/threats.json`);
   } catch (err) {
     console.error('Error in resolveVersions:', err);
     const lastUpdatedTemp = fs.existsSync(lastUpdatedTempFile)
@@ -221,7 +161,6 @@ async function resolveVersions() {
     fs.writeFileSync(lastUpdatedFile, lastUpdatedTemp || JSON.stringify({ lastUpdated: null }, null, 2));
     process.exitCode = 1;
   }
-  console.log(`Resolved and merged ${Object.keys(advisories).length} packages into ../data/threats.json`);
 }
 
 resolveVersions();
