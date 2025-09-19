@@ -30,8 +30,15 @@ scan-compromised
 ```bash
 scan-compromised --json
 ```
-## 📁 Threat List
+
+## 📁 Threat List & Data Updates
 The tool uses a local `threats.json` file located in the root of the CLI package. This file contains a list of known compromised packages and their malicious versions.
+
+**Data Source:**
+
+- The list of known vulnerabilities is automatically pulled from GitHub Security Advisories every day.
+- This ensures the scan is always up to date with the latest reported threats in the npm ecosystem.
+
 
 Example `threats.json`
 ```json
