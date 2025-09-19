@@ -2,7 +2,11 @@
 import { existsSync, readFileSync } from "fs";
 import { join, isAbsolute, dirname } from "path";
 import { fileURLToPath } from "url";
+import util from "util";
 import CONFIG from "../config/config.js";
+
+// Create a debug logger for the "threats" namespace
+const debug = util.debuglog("threats");
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -10,37 +14,43 @@ const __dirname = dirname(__filename);
 const { threatsFile } = CONFIG;
 if (!threatsFile) throw new Error("Set threatsFile in config");
 
-// Try resolving from project root first
-const projectPath = isAbsolute(threatsFile)
-  ? threatsFile
-  : join(process.cwd(), threatsFile);
+debug("CONFIG.threatsFile = %s", threatsFile);
 
-// Fallback to CLI-relative path
-const fallbackPath = isAbsolute(threatsFile)
-  ? threatsFile
-  : join(__dirname, threatsFile);
+let resolvedThreatsPath;
 
-// Final path
-const resolvedThreatsPath = existsSync(projectPath)
-  ? projectPath
-  : existsSync(fallbackPath)
-    ? fallbackPath
-    : null;
+if (isAbsolute(threatsFile)) {
+  debug("Path is absolute");
+  resolvedThreatsPath = threatsFile;
+} else {
+  debug("Path is relative");
 
-if (!resolvedThreatsPath) {
+  const localPath = join(process.cwd(), threatsFile);
+  debug("Checking local path: %s -> %s", localPath, existsSync(localPath));
+
+  const cliPath = join(__dirname, "..", threatsFile);
+  debug("Checking CLI path: %s -> %s", cliPath, existsSync(cliPath));
+
+  if (existsSync(localPath)) {
+    resolvedThreatsPath = localPath;
+  } else if (existsSync(cliPath)) {
+    resolvedThreatsPath = cliPath;
+  }
+}
+
+if (!resolvedThreatsPath || !existsSync(resolvedThreatsPath)) {
   console.error(`❌ ${threatsFile} not found in project or CLI directory.`);
   process.exit(1);
 }
 
+debug("Using threats file: %s", resolvedThreatsPath);
 
 function loadThreats() {
-  if (!existsSync(resolvedThreatsPath)) {
-    console.error(`❌ ${resolvedThreatsPath} not found.`);
-    process.exit(1);
-  }
+  debug("Loading threats from %s", resolvedThreatsPath);
   try {
     const raw = readFileSync(resolvedThreatsPath, "utf8");
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    debug("Loaded %d packages from threats file", Object.keys(parsed).length);
+    return parsed;
   } catch (err) {
     console.error(`❌ Failed to parse ${resolvedThreatsPath}:`, err.message);
     process.exit(1);
@@ -61,21 +71,24 @@ function escRe(s) {
 }
 
 function getCompromisedMap() {
+  debug("Building compromised map");
   const map = new Map();
   for (const [pkg, versions] of Object.entries(compromised)) {
     map.set(pkg, new Set(versions));
   }
+  debug("Compromised map contains %d packages", map.size);
   return map;
 }
 
 function recordFinding(findings, type, file, pkg, version, where) {
+  debug("Recording finding: %s %s@%s in %s (%s)", type, pkg, version, file, where);
   findings.push({ type, file, pkg, version, where });
 }
 
 // -------- Scanners --------
 
-// package.json
 function scanPackageJson(content, bad) {
+  debug("Scanning package.json");
   const findings = [];
   try {
     const json = JSON.parse(content);
@@ -85,6 +98,7 @@ function scanPackageJson(content, bad) {
       ...(json.peerDependencies || {}),
       ...(json.optionalDependencies || {})
     };
+    debug("Found %d dependencies in package.json", Object.keys(allDeps).length);
     for (const [pkg, range] of Object.entries(allDeps)) {
       if (!bad.has(pkg)) continue;
       let type = "warn";
@@ -96,16 +110,18 @@ function scanPackageJson(content, bad) {
       }
       recordFinding(findings, type, "package.json", pkg, range, "declared dependency");
     }
-  } catch {}
+  } catch (err) {
+    debug("Error parsing package.json: %s", err.message);
+  }
+  debug("package.json scan complete: %d findings", findings.length);
   return findings;
 }
 
-// package-lock.json
 function scanPackageLock(content, bad) {
+  debug("Scanning package-lock.json");
   const findings = [];
   try {
     const lock = JSON.parse(content);
-    const stack = [];
 
     function visitDeps(obj, pathArr = []) {
       if (!obj) return;
@@ -121,6 +137,7 @@ function scanPackageLock(content, bad) {
     }
 
     if (lock.packages && typeof lock.packages === "object") {
+      debug("Detected npm v7+ lockfile format");
       for (const [pkgPath, meta] of Object.entries(lock.packages)) {
         if (!meta || !meta.version) continue;
         const name = meta.name || (pkgPath.includes("node_modules/") ? pkgPath.split("node_modules/").pop() : null);
@@ -131,14 +148,18 @@ function scanPackageLock(content, bad) {
         }
       }
     } else {
+      debug("Detected npm v6 lockfile format");
       visitDeps(lock, []);
     }
-  } catch {}
+  } catch (err) {
+    debug("Error parsing package-lock.json: %s", err.message);
+  }
+  debug("package-lock.json scan complete: %d findings", findings.length);
   return findings;
 }
 
-// yarn.lock v1
 function scanYarnLockV1(content, bad) {
+  debug("Scanning yarn.lock v1");
   const findings = [];
   const entries = content.split(/\n{2,}/g);
   for (const entry of entries) {
@@ -166,11 +187,12 @@ function scanYarnLockV1(content, bad) {
       }
     }
   }
+  debug("yarn.lock v1 scan complete: %d findings", findings.length);
   return findings;
 }
 
-// Yarn Berry (v2+)
 function scanYarnBerryLock(content, bad) {
+  debug("Scanning Yarn Berry lockfile");
   const findings = [];
   const blockRe = /^("?([^"\n]+)"?):\n((?: {2}.+\n)+)/gm;
   let m;
@@ -192,11 +214,12 @@ function scanYarnBerryLock(content, bad) {
       recordFinding(findings, type, "yarn.lock", name, version, key);
     }
   }
+  debug("Yarn Berry scan complete: %d findings", findings.length);
   return findings;
 }
 
-// pnpm-lock.yaml
 function scanPnpmLock(content, bad) {
+  debug("Scanning pnpm-lock.yaml");
   const findings = [];
   const re = /^\s*\/?(@?[^@\s/][^@:\s/]*\/?[^@:\s/]*)@([0-9][^:\s]+):/gm;
   let m;
@@ -208,18 +231,25 @@ function scanPnpmLock(content, bad) {
       recordFinding(findings, type, "pnpm-lock.yaml", name, version, `${name}@${version}`);
     }
   }
+  debug("pnpm-lock.yaml scan complete: %d findings", findings.length);
   return findings;
 }
 
 // -------- Runner --------
 (function main() {
+  debug("Starting main scan");
   const bad = getCompromisedMap();
   const allFindings = [];
 
   for (const file of filesToCheck) {
+    debug("Checking for %s", file);
     const filePath = join(process.cwd(), file);
-    if (!existsSync(filePath)) continue;
+    if (!existsSync(filePath)) {
+      debug("Skipping %s (not found)", file);
+      continue;
+    }
     const content = readFileSync(filePath, "utf8");
+    debug("Found %s, size %d bytes", file, content.length);
 
     if (file === "package.json") {
       allFindings.push(...scanPackageJson(content, bad));
@@ -234,8 +264,12 @@ function scanPnpmLock(content, bad) {
     }
   }
 
+  debug("Total findings collected: %d", allFindings.length);
+
   const badFindings = allFindings.filter(f => f.type === "bad");
   const warnFindings = allFindings.filter(f => f.type === "warn");
+
+  debug("Bad findings: %d, Warn findings: %d", badFindings.length, warnFindings.length);
 
   warnFindings.forEach(f =>
     console.log(`⚠️  WARNING: ${f.pkg}@${f.version} in ${f.file} (${f.where}) — package was targeted in past attack, but version is not flagged as malicious`)
@@ -248,6 +282,8 @@ function scanPnpmLock(content, bad) {
   if (badFindings.length === 0) {
     console.log("✅ No known malicious versions detected.");
   } else {
+    debug("Exiting with code 1 due to bad findings");
     process.exit(1);
   }
+  debug("Scan complete");
 })();
