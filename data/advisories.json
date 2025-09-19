@@ -1,0 +1,17 @@
+{
+  "@lobehub/chat": [
+    "<= 1.129.3"
+  ],
+  "ggit": [
+    "<= 2.4.12"
+  ],
+  "@sequa-ai/sequa-mcp": [
+    "< 1.0.14"
+  ],
+  "@parcel/reporter-dev-server": [
+    "<= 2.14.4"
+  ],
+  "bootstrap": [
+    "= 3.4.1"
+  ]
+}
