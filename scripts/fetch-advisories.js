@@ -1,6 +1,6 @@
 import fs from 'fs';
-import https from 'https';
 import CONFIG from '../config/config.js';
+import { printProgress, httpsRequest } from './helpers.js';
 
 const {
   advisoriesApiUrl,
@@ -21,25 +21,6 @@ let lastUpdated = '2000-01-01T00:00:00Z';
 if (fs.existsSync(lastUpdatedFile)) {
   lastUpdated = JSON.parse(fs.readFileSync(lastUpdatedFile, 'utf8')).lastUpdated;
   fs.writeFileSync(lastUpdatedTempFile, JSON.stringify({ lastUpdated }, null, 2));
-}
-
-function httpsRequest(url, options, body) {
-  return new Promise((resolve, reject) => {
-    const req = https.request(url, options, res => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          resolve(JSON.parse(data));
-        } else {
-          reject(new Error(`${res.statusCode} ${res.statusMessage}: ${data}`));
-        }
-      });
-    });
-    req.on('error', reject);
-    if (body) req.write(body);
-    req.end();
-  });
 }
 
 async function fetchAdvisories() {
@@ -113,12 +94,6 @@ async function fetchAdvisories() {
   fs.writeFileSync(advisoriesFile, JSON.stringify(advisories, null, 2));
   fs.writeFileSync(lastUpdatedFile, JSON.stringify({ lastUpdated: maxUpdated }, null, 2));
   console.log(`Fetched ${Object.keys(advisories).length} packages into ${advisoriesFile}`);
-}
-
-function printProgress(message, newLine = false) {
-  process.stdout.cursorTo(0);
-  process.stdout.write(`${message}`);
-  if (newLine) process.stdout.write('\n');
 }
 
 fetchAdvisories();
