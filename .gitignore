@@ -55,5 +55,6 @@ Thumbs.db
 # VS Code settings
 .vscode/
 
-# Explicitly include advisories.json
-!advisories.json
+# Exclude advisories.json
+advisories.json
+data/advisories.json
