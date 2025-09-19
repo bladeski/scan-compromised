@@ -35,7 +35,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git checkout -b "$BRANCH"
-          git add data/last-updated.json data/threats.json
+          git add data/lastUpdated.json data/threats.json
           git commit -m "Update threats data [auto]"
           git push origin "$BRANCH"
         env:
