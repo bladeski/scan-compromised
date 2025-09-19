@@ -1,24 +1,48 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from "fs";
-import { join } from "path";
-import CONFIG from '../config/config.js';
+import { join, isAbsolute, dirname } from "path";
+import { fileURLToPath } from "url";
+import CONFIG from "../config/config.js";
 
-const {
-  threatsFile,
-} = CONFIG;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-if (!threatsFile) throw new Error('Set threatsFile in config');
+const { threatsFile } = CONFIG;
+if (!threatsFile) throw new Error("Set threatsFile in config");
+
+// Try resolving from project root first
+const projectPath = isAbsolute(threatsFile)
+  ? threatsFile
+  : join(process.cwd(), threatsFile);
+
+// Fallback to CLI-relative path
+const fallbackPath = isAbsolute(threatsFile)
+  ? threatsFile
+  : join(__dirname, threatsFile);
+
+// Final path
+const resolvedThreatsPath = existsSync(projectPath)
+  ? projectPath
+  : existsSync(fallbackPath)
+    ? fallbackPath
+    : null;
+
+if (!resolvedThreatsPath) {
+  console.error(`❌ ${threatsFile} not found in project or CLI directory.`);
+  process.exit(1);
+}
+
 
 function loadThreats() {
-  if (!existsSync(threatsFile)) {
-    console.error(`❌ ${threatsFile} not found in CLI directory.`);
+  if (!existsSync(resolvedThreatsPath)) {
+    console.error(`❌ ${resolvedThreatsPath} not found.`);
     process.exit(1);
   }
   try {
-    const raw = readFileSync(threatsFile, "utf8");
+    const raw = readFileSync(resolvedThreatsPath, "utf8");
     return JSON.parse(raw);
   } catch (err) {
-    console.error(`"❌ Failed to parse ${threatsFile}:"`, err.message);
+    console.error(`❌ Failed to parse ${resolvedThreatsPath}:`, err.message);
     process.exit(1);
   }
 }
