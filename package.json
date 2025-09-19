@@ -1,6 +1,6 @@
 {
   "name": "scan-compromised",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "description": "A simple npm CLI tool (starter template)",
   "main": "scripts/index.js",
   "type": "module",
