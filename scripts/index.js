@@ -15,7 +15,7 @@ function loadThreats() {
     process.exit(1);
   }
   try {
-    const raw = readFileSync(threatPath, "utf8");
+    const raw = readFileSync(threatsFile, "utf8");
     return JSON.parse(raw);
   } catch (err) {
     console.error(`"❌ Failed to parse ${threatsFile}:"`, err.message);
