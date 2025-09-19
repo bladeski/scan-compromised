@@ -11,7 +11,7 @@ if (!threatsFile) throw new Error('Set threatsFile in config');
 
 function loadThreats() {
   if (!existsSync(threatsFile)) {
-    console.error("❌ threats.json not found in CLI directory.");
+    console.error(`❌ ${threatsFile} not found in CLI directory.`);
     process.exit(1);
   }
   try {
