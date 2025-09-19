@@ -6,9 +6,9 @@ on:
     branches: [main]
 
 permissions:
-  id-token: write    # Required for npm Trusted Publishing (OIDC)
-  contents: write    # Needed to push commits/tags
-  packages: write    # Needed to publish packages
+  id-token: write
+  contents: write
+  packages: write
 
 jobs:
   release:
@@ -20,64 +20,81 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.PAT_TAG_PUSH }} # PAT so pushes are treated as user actions
+          token: ${{ secrets.PAT_TAG_PUSH }}
 
       - name: Setup Git identity
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # Generate changelog using conventional commits
-      - name: Generate changelog text
-        id: changelog
-        uses: TriPSs/conventional-changelog-action@v5
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          output-file: CHANGELOG.md
-          skip-version-file: true
-          skip-commit: true
-          skip-tag: true
-          preset: conventionalcommits
+      # Install changelog + bump tools
+      - name: Install changelog tools
+        run: npm install -g conventional-changelog-cli conventional-recommended-bump
 
-      # Bump version, commit, and tag in one step
-      - name: Determine and bump version
+      # Determine next version automatically
+      - name: Determine next version
         id: bump
         run: |
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
-          NEW_VERSION="$major.$minor.$((patch+1))"
-          npm version "$NEW_VERSION"
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          RELEASE_TYPE=$(npx conventional-recommended-bump -p conventionalcommits | jq -r '.releaseType')
+          if [ "$RELEASE_TYPE" = "null" ] || [ -z "$RELEASE_TYPE" ]; then
+            echo "No conventional commits since last release. Skipping."
+            echo "release_needed=false" >> $GITHUB_OUTPUT
+          else
+            CURRENT=$(node -p "require('./package.json').version")
+            IFS='.' read -r major minor patch <<< "$CURRENT"
+            case "$RELEASE_TYPE" in
+              major) major=$((major+1)); minor=0; patch=0 ;;
+              minor) minor=$((minor+1)); patch=0 ;;
+              patch) patch=$((patch+1)) ;;
+            esac
+            NEW_VERSION="$major.$minor.$patch"
+            npm version "$NEW_VERSION" --no-git-tag-version
+            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "release_needed=true" >> $GITHUB_OUTPUT
+          fi
 
-      # Prepend changelog to file
+      - name: Stop if no release needed
+        if: steps.bump.outputs.release_needed == 'false'
+        run: exit 0
+
+      # Generate only the latest changelog section
+      - name: Generate latest changelog section
+        id: changelog
+        run: |
+          LATEST_CHANGELOG=$(npx conventional-changelog -p conventionalcommits -r 1)
+          echo "latest_changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$LATEST_CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # Prepend new section to existing file
       - name: Prepend to CHANGELOG.md
         run: |
-          NEW_CHANGELOG="## v${{ steps.bump.outputs.new_version }}\n\n${{ steps.changelog.outputs.changelog }}\n"
+          NEW_CHANGELOG="${{ steps.changelog.outputs.latest_changelog }}"
           if [ -f CHANGELOG.md ]; then
-            cp CHANGELOG.md OLD_CHANGELOG.md
-            echo -e "$NEW_CHANGELOG\n$(cat OLD_CHANGELOG.md)" > CHANGELOG.md
+            echo -e "$NEW_CHANGELOG\n$(cat CHANGELOG.md)" > CHANGELOG.md
           else
             echo -e "$NEW_CHANGELOG" > CHANGELOG.md
           fi
 
-      # Amend bump commit to include changelog
-      - name: Amend commit to include CHANGELOG.md
+      # Commit and tag
+      - name: Commit and tag
         run: |
-          git add CHANGELOG.md
-          git commit --amend --no-edit
+          git add package.json package-lock.json CHANGELOG.md
+          git commit -m "chore(release): v${{ steps.bump.outputs.new_version }}"
+          git tag v${{ steps.bump.outputs.new_version }}
 
-      # Push commit and tag
       - name: Push commit and tag
         run: git push origin main --follow-tags
 
-      # Extract the latest changelog section for this tag
-      - name: Extract release notes from CHANGELOG.md
+      # Extract release notes from the latest section
+      - name: Extract release notes
         id: notes
-        uses: ffurrer2/extract-release-notes@v2
-        with:
-          changelog_file: CHANGELOG.md
+        run: |
+          echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+          echo "${{ steps.changelog.outputs.latest_changelog }}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-      # Create GitHub Release with extracted notes
+      # Create GitHub Release
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -94,7 +111,6 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
-      # Ensure correct registry and publish via Trusted Publishing
       - name: Ensure npm registry
         run: npm config set registry https://registry.npmjs.org/
 
