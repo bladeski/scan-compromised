@@ -26,6 +26,8 @@ jobs:
 
       - name: Run update-threats script
         run: npm run update-threats
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create new branch
         run: |

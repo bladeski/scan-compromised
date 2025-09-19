@@ -10,8 +10,7 @@ const {
 if (!threatsFile) throw new Error('Set threatsFile in config');
 
 function loadThreats() {
-  const threatPath = join(__dirname, threatsFile);
-  if (!existsSync(threatPath)) {
+  if (!existsSync(threatsFile)) {
     console.error("❌ threats.json not found in CLI directory.");
     process.exit(1);
   }
