@@ -13,7 +13,8 @@
   },
   "files": [
     "scripts/index.js",
-    "data/threats.json"
+    "data/threats.json",
+    "config/config.js"
   ],
   "scripts": {
     "start": "node scripts/index.js",
