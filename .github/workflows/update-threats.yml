@@ -3,7 +3,7 @@ name: Update Threats
 on:
   schedule:
     - cron: '0 3 * * *'  # Runs daily at 03:00 UTC
-  workflow_dispatch:     # Allows manual trigger
+  workflow_dispatch:
 
 jobs:
   update-threats:
@@ -29,19 +29,29 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create new branch
+      - name: Create new branch and commit changes
+        id: commit_step
         run: |
           BRANCH="update-threats-$(date +'%Y%m%d')"
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git checkout -b "$BRANCH"
           git add data/lastUpdated.json data/threats.json
-          git commit -m "Update threats data [auto]"
-          git push origin "$BRANCH"
+
+          # Try to commit and detect if anything changed
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            echo "commit_made=false" >> $GITHUB_OUTPUT
+          else
+            git commit -m "Update threats data [auto]"
+            git push origin "$BRANCH"
+            echo "commit_made=true" >> $GITHUB_OUTPUT
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create pull request
+        if: steps.commit_step.outputs.commit_made == 'true'
         id: create_pr
         uses: peter-evans/create-pull-request@v5
         with:
