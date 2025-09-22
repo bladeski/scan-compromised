@@ -7,6 +7,7 @@ import {
   formatTime,
   drawProgressBar
 } from './helpers.js';
+import { logToRoot } from "./logger.js";
 
 const {
   registryUrl,
