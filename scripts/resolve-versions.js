@@ -143,8 +143,21 @@ async function resolveVersions() {
 
     printProgress('', true); // newline after final progress
 
-    for (const { pkg, versions } of resolved) {
-      if (!pkg || !versions) continue;
+    for (const item of resolved) {
+      if (!item) {
+        logToRoot('Skipped entry: null or undefined in resolved array.');
+        continue;
+      }
+    
+      const { pkg, versions } = item;
+    
+      if (!pkg || !versions) {
+        logToRoot(
+          `Skipped entry: missing pkg or versions. pkg=${pkg || 'null'}, versions=${versions || 'null'}`
+        );
+        continue;
+      }
+    
       if (!threats[pkg]) threats[pkg] = [];
       const existing = new Set(threats[pkg]);
       for (const v of versions) existing.add(v);
