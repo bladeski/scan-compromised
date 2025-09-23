@@ -59,6 +59,7 @@ export function formatTime(seconds) {
 }
 
 export function drawProgressBar(completed, total, eta) {
+  const progressBarLength = 50;
   const percent = Math.floor((completed / total) * 100);
   const filled = Math.floor((percent / 100) * progressBarLength);
   const bar = '█'.repeat(filled) + '░'.repeat(progressBarLength - filled);
