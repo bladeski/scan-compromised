@@ -57,7 +57,7 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: step.commit_step.outputs.branch_name
+          branch: ${{ step.commit_step.outputs.branch_name }}
           title: "chore: update threats data [auto]"
           body: |
             # Pull Request
