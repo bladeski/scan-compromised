@@ -1,3 +1,8 @@
+## [1.1.6](https://github.com/bladeski/scan-compromised/compare/v1.1.5...v1.1.6) (2025-09-24)
+
+### Bug Fixes
+
+* update workflow not creating unique branch name ([7128eea](https://github.com/bladeski/scan-compromised/commit/7128eea255f2dc08e0e15889df00ebb3d570d316))
 ## [1.1.5](https://github.com/bladeski/scan-compromised/compare/v1.1.4...v1.1.5) (2025-09-24)
 ## [1.1.4](https://github.com/bladeski/scan-compromised/compare/v1.1.3...v1.1.4) (2025-09-23)
 ## [1.1.3](https://github.com/bladeski/scan-compromised/compare/v1.1.2...v1.1.3) (2025-09-22)
