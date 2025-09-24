@@ -1,3 +1,8 @@
+## [1.1.7](https://github.com/bladeski/scan-compromised/compare/v1.1.6...v1.1.7) (2025-09-24)
+
+### Bug Fixes
+
+* Update branch name to variable in build step ([ffefd67](https://github.com/bladeski/scan-compromised/commit/ffefd679c7b34670e96c473c244ec0aa2d066fe6))
 ## [1.1.6](https://github.com/bladeski/scan-compromised/compare/v1.1.5...v1.1.6) (2025-09-24)
 
 ### Bug Fixes
