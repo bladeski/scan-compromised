@@ -70,3 +70,10 @@ jobs:
           token: ${{ secrets.AUTO_APPROVE_TOKEN }}
           pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
           merge-method: squash
+
+      - name: Delete update branch
+        if: steps.create_pr.outputs.pull-request-number != ''
+        uses: peter-evans/delete-branch@v5
+        with:
+          token: ${{ secrets.AUTO_APPROVE_TOKEN }}
+          branch: update-threats-${{ github.run_id }}
