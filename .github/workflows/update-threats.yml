@@ -32,7 +32,7 @@ jobs:
       - name: Create new branch and commit changes
         id: commit_step
         run: |
-          BRANCH="update-threats-$(date +'%Y%m%d')"
+          BRANCH="update-threats-$(date +'%Y%m%d')-${{ github.run_id }}"
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git checkout -b "$BRANCH"
