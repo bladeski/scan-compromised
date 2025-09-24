@@ -1,3 +1,8 @@
+## [1.1.8](https://github.com/bladeski/scan-compromised/compare/v1.1.7...v1.1.8) (2025-09-24)
+
+### Bug Fixes
+
+* issue with PR overwriting existing branch ([25fb125](https://github.com/bladeski/scan-compromised/commit/25fb125ea61bd6a7828d1733996fd31f184354ce))
 ## [1.1.7](https://github.com/bladeski/scan-compromised/compare/v1.1.6...v1.1.7) (2025-09-24)
 
 ### Bug Fixes
