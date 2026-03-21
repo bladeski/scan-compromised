@@ -1,3 +1,4 @@
+## [1.1.147](https://github.com/bladeski/scan-compromised/compare/v1.1.146...v1.1.147) (2026-03-21)
 ## [1.1.146](https://github.com/bladeski/scan-compromised/compare/v1.1.145...v1.1.146) (2026-03-20)
 ## [1.1.145](https://github.com/bladeski/scan-compromised/compare/v1.1.144...v1.1.145) (2026-03-18)
 ## [1.1.144](https://github.com/bladeski/scan-compromised/compare/v1.1.143...v1.1.144) (2026-03-17)
