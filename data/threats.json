@@ -416077,5 +416077,8 @@
     "9.0.7",
     "9.0.9"
   ],
-  "@opensearch-project/opensearch": []
+  "@opensearch-project/opensearch": [],
+  "@cap-js/db-service": [],
+  "@cap-js/postgres": [],
+  "@cap-js/sqlite": []
 }
