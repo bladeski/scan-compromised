@@ -77,12 +77,14 @@ jobs:
 
       # Commit and tag
       - name: Commit and tag
+        if: steps.bump.outputs.release_needed == 'true'
         run: |
           git add package.json package-lock.json CHANGELOG.md
           git commit -m "chore(release): v${{ steps.bump.outputs.new_version }}"
           git tag v${{ steps.bump.outputs.new_version }}
 
       - name: Push commit and tag
+        if: steps.bump.outputs.release_needed == 'true'
         run: git push origin main --follow-tags
 
       # Use the latest section as release notes
@@ -94,6 +96,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
+        if: steps.bump.outputs.release_needed == 'true'
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.bump.outputs.new_version }}
