@@ -89,6 +89,7 @@ jobs:
 
       # Use the latest section as release notes
       - name: Extract release notes
+        if: steps.bump.outputs.release_needed == 'true'
         id: notes
         run: |
           echo "release_notes<<EOF" >> $GITHUB_OUTPUT
@@ -106,16 +107,20 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
+        if: steps.bump.outputs.release_needed == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Ensure npm registry
+        if: steps.bump.outputs.release_needed == 'true'
         run: npm config set registry https://registry.npmjs.org/
 
       - name: Update npm
+        if: steps.bump.outputs.release_needed == 'true'
         run: npm install -g npm@latest
 
       - name: Publish to npm (Trusted Publishing)
+        if: steps.bump.outputs.release_needed == 'true'
         run: npm publish --access public
