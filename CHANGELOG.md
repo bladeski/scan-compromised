@@ -1,3 +1,8 @@
+## [1.1.236](https://github.com/bladeski/scan-compromised/compare/v1.1.234...v1.1.236) (2026-07-22)
+
+### Bug Fixes
+
+* Update checkout action version to v4.3.0 ([4d3ac98](https://github.com/bladeski/scan-compromised/commit/4d3ac9810b855e0bd5dde594c15917fd8280b587))
 
 ## [1.1.234](https://github.com/bladeski/scan-compromised/compare/v1.1.233...v1.1.234) (2026-06-26)
 ## [1.1.233](https://github.com/bladeski/scan-compromised/compare/v1.1.232...v1.1.233) (2026-06-25)
