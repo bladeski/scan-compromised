@@ -4,7 +4,7 @@
 
 **No third-party dependencies:** This tool is fully self-contained and does not rely on any external npm packages or libraries. You can use it with confidence in sensitive or locked-down environments.
 
-This scanner checks your `package.json`, `package-lock.json`, `yarn.lock`, and `pnpm-lock.yaml` files for any packages that were compromised in recent supply chain attacks — including the September 2024 XZ Utils backdoor and other known malicious releases.
+This scanner checks your `package.json`, `package-lock.json`, `yarn.lock`, and `pnpm-lock.yaml` files for any packages that were compromised in recent supply chain attacks — including the September 2024 incident and other known exploits.
 
 It flags:
 - ❌ Known malicious versions (fails the scan)
@@ -12,15 +12,40 @@ It flags:
 
 ---
 
+## ✨ Features
+
+- **Zero dependencies** — No external npm packages required
+- **Multiple lock file support** — Scans package-lock.json, yarn.lock, pnpm-lock.yaml, and package.json
+- **Fast local scanning** — No network calls needed for threat detection
+- **CI/CD ready** — JSON output and exit codes for easy integration
+- **GitHub Actions support** — Pre-configured workflow examples included
+- **Hard gate capability** — Block installations with malicious packages
+
+---
+
 ## 📋 Table of Contents
 
+- [Quick Start](#-quick-start)
 - [Installation](#-installation)
 - [Usage](#-usage)
 - [Output Examples](#-output-examples)
 - [Threat List & Data Updates](#-threat-list--data-updates)
 - [GitHub Actions Integration](#-github-actions-integration)
 - [Troubleshooting](#-troubleshooting)
+- [Contributing](#-contributing)
 - [License](#-license)
+
+---
+
+## ⚡ Quick Start
+
+Get started in seconds:
+
+```bash
+npx scan-compromised
+```
+
+That's it! The tool will scan your project and report any known compromised packages.
 
 ---
 
@@ -36,6 +61,11 @@ npx scan-compromised
 npm install -g scan-compromised
 scan-compromised
 ```
+
+### Requirements
+
+- **Node.js:** 14.0.0 or higher
+- **npm:** 6.0.0 or higher (or Yarn/pnpm equivalent)
 
 ---
 
@@ -55,7 +85,7 @@ Add this to your project's `preinstall` script in `package.json`:
 }
 ```
 
-⚠️ **Note:** The `preinstall` script runs *before* `npm install`. If the scan detects known malicious packages, it will exit with a non-zero code and **halt the installation**, acting as a hard gate in your supply chain.
+⚠️ **Note:** The `preinstall` script runs *before* `npm install`. If the scan detects known malicious packages, it will exit with a non-zero code and **halt the installation**, acting as a hard gate.
 
 ### JSON output (for CI integration)
 ```bash
@@ -66,18 +96,18 @@ scan-compromised --json
 
 ## 📊 Output Examples
 
-### Standard output
+### Standard output (no threats)
 ```
 ✓ Scanning package.json...
 ✓ No known compromised packages detected
 Scan completed successfully
 ```
 
-### With threats detected
+### Standard output (with threats detected)
 ```
 ✗ Scanning package.json...
-⚠️ ngx-toastr@19.0.1 is a known compromised package
-✗ Scan failed: malicious version detected
+✗ ngx-toastr@19.0.1 — CRITICAL: Known malicious package
+✗ Scan failed: 1 malicious package detected
 ```
 
 ### JSON output
@@ -88,9 +118,11 @@ Scan completed successfully
     {
       "package": "ngx-toastr",
       "version": "19.0.1",
-      "severity": "critical"
+      "severity": "critical",
+      "type": "malicious"
     }
   ],
+  "count": 1,
   "timestamp": "2026-07-22T12:00:00Z"
 }
 ```
@@ -119,6 +151,13 @@ npm update -g scan-compromised
 
 Or if using `npx`, it will automatically fetch the latest version on each run.
 
+### Database Information
+
+- **Current tracked packages:** 50+
+- **Total monitored versions:** 200+
+- **Last updated:** With every package release
+- **View the database:** [`threats.json`](./threats.json)
+
 ### Manual updates
 
 You can update `threats.json` manually as new threats are discovered:
@@ -136,6 +175,8 @@ You can update `threats.json` manually as new threats are discovered:
 ## 🧪 GitHub Actions Integration
 
 You can run this tool automatically on every push or pull request using GitHub Actions.
+
+### Basic workflow
 
 **`.github/workflows/scan.yml`**
 
@@ -160,7 +201,14 @@ jobs:
         run: npx scan-compromised --json
 ```
 
-This will block merges if malicious packages are detected.
+### With branch protection
+
+To prevent merges when malicious packages are detected, add this workflow as a required status check in your [branch protection rules](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches):
+
+1. Go to **Settings** → **Branches**
+2. Add branch protection rule for `main`
+3. Enable **Require status checks to pass before merging**
+4. Select the **Scan for Compromised Packages** check
 
 ---
 
@@ -186,7 +234,28 @@ For monorepos, run the scanner from the root directory. It will scan all workspa
 
 ### False positives
 
-If you believe a detection is a false positive, please [open an issue](https://github.com/bladeski/scan-compromised/issues) with details about the package and version.
+If you believe a detection is a false positive, please [open an issue](https://github.com/bladeski/scan-compromised/issues) with:
+- Package name and version
+- Details about why you believe it's a false positive
+- Any additional context
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! If you've discovered a new compromised package or have improvements to suggest:
+
+1. [Open an issue](https://github.com/bladeski/scan-compromised/issues) to discuss the change
+2. [Submit a pull request](https://github.com/bladeski/scan-compromised/pulls) with your updates to `threats.json` or code
+3. Ensure your threat data includes the package name, affected versions, and source
+
+### Threat data contributions
+
+When submitting a threat update, please include:
+- Package name (exact npm package name)
+- Affected version(s)
+- Source/advisory link
+- Brief description of the threat
 
 ---
 
