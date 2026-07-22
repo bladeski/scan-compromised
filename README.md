@@ -95,4 +95,4 @@ jobs:
         run: npx scan-compromised
 ```
 ## 🛡️ License
-MIT © Jonathan Blades
+MIT © Jonathan Blades (jonoblades@gmail.com)
