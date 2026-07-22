@@ -4,7 +4,7 @@
 
 **No third-party dependencies:** This tool is fully self-contained and does not rely on any external npm packages or libraries. You can use it with confidence in sensitive or locked-down environments.
 
-This scanner checks your `package.json`, `package-lock.json`, `yarn.lock`, and `pnpm-lock.yaml` files for any packages that were compromised in recent supply chain attacks — including the September 2025 Shai-Hulud incident.
+This scanner checks your `package.json`, `package-lock.json`, `yarn.lock`, and `pnpm-lock.yaml` files for any packages that were compromised in recent supply chain attacks — including the September 2025 Shai-Hulud and Shai-Hulud v2 incidents.
 
 It flags:
 - ❌ Known malicious versions (fails the scan)
