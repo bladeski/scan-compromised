@@ -1,4 +1,4 @@
-# scan-compromised
+# Scan Compromised
 
 🔍 A CLI tool to detect known compromised npm packages in your project.
 
